@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventory Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="icon" href="12favicon.png" type="image/png">
   <style>
     body, html {
       margin: 0; padding: 0; height: 100%; width: 100%;
@@ -24,14 +23,19 @@
       text-align: right;
     }
     .toggle-btn {
-      font-size: 24px;
-      background: #007bff;
-      color: white;
-      padding: 5px 10px;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
+  font-size: 18px;
+  width: 40px;               /* Set fixed width */
+  height: 36px;              /* Set fixed height */
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
     .container {
       display: flex; height: calc(100vh - 80px);
     }
