@@ -23,19 +23,19 @@
       text-align: right;
     }
     .toggle-btn {
-  font-size: 18px;
-  width: 40px;               /* Set fixed width */
-  height: 36px;              /* Set fixed height */
-  background: #007bff;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 5px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
+      font-size: 24px;
+      background: #007bff;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      width: 40px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .container {
       display: flex; height: calc(100vh - 80px);
     }
@@ -104,6 +104,10 @@
       border: 1px solid black;
       text-align: center;
     }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
   </style>
 </head>
 <body onload="initDashboard()">
@@ -152,70 +156,33 @@
     <div class="main-content">
       <div id="itemMaster" style="display:none;">
         <h2>Item Master</h2>
-        <form id="itemForm">
-          <input type="text" id="itemCode" placeholder="Item Code">
-          <input type="text" id="itemName" placeholder="Item Name">
-          <input type="text" id="packSize" placeholder="Pack Size">
-          <input type="number" id="costPrice" placeholder="Cost Price">
-          <input type="number" id="sellPrice" placeholder="Selling Price">
-          <input type="text" id="supplierName" placeholder="Supplier Name">
-          <button type="submit">Save Item</button>
-        </form>
-      </div>
-      <div id="myStock" style="display:none;">
-        <h2>My Stock</h2>
-        <input type="text" id="stockItemCode" placeholder="Enter Item Code">
-        <button onclick="checkStockItem()">Check Stock</button>
-        <div id="stockResult"></div>
-      </div>
-      <div id="purchaseOrder" style="display:none;">
-        <h2>Purchase Order</h2>
-        <textarea id="poRemark" placeholder="Remarks"></textarea>
-        <table id="poTable">
-          <thead>
-            <tr><th>Code</th><th>Name</th><th>Qty</th><th>Price</th><th>Amount</th></tr>
-          </thead><tbody></tbody>
-        </table>
-        <button onclick="addPOItem()">Add Item</button>
-        <button onclick="savePO()">Save PO</button>
-      </div>
-      <div id="grnSection" style="display:none;">
-        <h2>GRN</h2>
-        <input type="number" id="grnPOInput" placeholder="Enter PO Number">
-        <button onclick="loadGRNFromPO()">Load PO</button>
-        <table id="grnTable">
-          <thead><tr><th>Code</th><th>Name</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <button onclick="saveGRN()">Save GRN</button>
+        <input type="text" id="itemCode" placeholder="Item Code">
+        <input type="text" id="itemName" placeholder="Item Name">
+        <input type="text" id="packSize" placeholder="Pack Size">
+        <input type="number" id="costPrice" placeholder="Cost Price">
+        <input type="number" id="sellPrice" placeholder="Selling Price">
+        <input type="text" id="supplierName" placeholder="Supplier Name">
+        <div class="btn-row">
+          <button onclick="createItem()">Create</button>
+          <button onclick="editItem()">Edit</button>
+          <button onclick="saveItem()">Save</button>
+          <button onclick="deleteItem()">Delete</button>
+        </div>
       </div>
     </div>
   </div>
 
 <script>
 let itemDB = JSON.parse(localStorage.getItem("itemDB") || "{}");
-let poDB = [];
-let currentPONum = 1;
+let nextItemCode = 1;
 
 function initDashboard() {
   const user = localStorage.getItem("username") || "User";
   const location = localStorage.getItem("location") || "WarehouseA";
   document.getElementById("userName").textContent = user;
   document.getElementById("userLocation").textContent = location;
-
-  document.getElementById("itemForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-    const code = document.getElementById("itemCode").value.trim() || '1' + (Object.keys(itemDB).length + 1).toString().padStart(4, '0');
-    itemDB[code] = {
-      name: document.getElementById("itemName").value,
-      ps: document.getElementById("packSize").value,
-      cost: document.getElementById("costPrice").value,
-      sell: document.getElementById("sellPrice").value,
-      supplier: document.getElementById("supplierName").value
-    };
-    localStorage.setItem("itemDB", JSON.stringify(itemDB));
-    alert("Item saved: " + code);
-    e.target.reset();
+  document.getElementById("itemCode").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") loadItem();
   });
 }
 
@@ -234,44 +201,66 @@ function logout() {
   localStorage.clear();
   window.location.href = 'index.html';
 }
-function checkStockItem() {
-  const code = document.getElementById("stockItemCode").value;
+
+function createItem() {
+  let code = String(nextItemCode++);
+  itemDB[code] = getItemFormData();
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+  document.getElementById("itemCode").value = code;
+  clearItemForm(true);
+  alert("Item created: " + code);
+}
+
+function loadItem() {
+  const code = document.getElementById("itemCode").value;
   const item = itemDB[code];
-  document.getElementById("stockResult").textContent = item ? `Item: ${item.name}, Stock: ${item.sih || 0}` : "Not Found";
+  if (!item) return alert("Item not found");
+  document.getElementById("itemName").value = item.name;
+  document.getElementById("packSize").value = item.ps;
+  document.getElementById("costPrice").value = item.cost;
+  document.getElementById("sellPrice").value = item.sell;
+  document.getElementById("supplierName").value = item.supplier;
 }
-function addPOItem() {
-  const code = prompt("Enter item code");
-  const item = itemDB[code];
-  if (!item) return alert("Invalid code");
-  const qty = parseInt(prompt("Enter Qty"));
-  const cost = parseFloat(item.cost);
-  const row = `<tr><td>${code}</td><td>${item.name}</td><td>${qty}</td><td>${cost}</td><td>${(qty*cost).toFixed(2)}</td></tr>`;
-  document.querySelector("#poTable tbody").innerHTML += row;
-}
-function savePO() {
-  const rows = document.querySelectorAll("#poTable tbody tr");
-  const remark = document.getElementById("poRemark").value;
-  let items = [];
-  rows.forEach(r => {
-    const td = r.children;
-    items.push({ code: td[0].innerText, name: td[1].innerText, qty: parseInt(td[2].innerText), cost: parseFloat(td[3].innerText) });
-  });
-  poDB.push({ docNo: currentPONum++, remark, items });
-  alert("PO Saved");
-  document.querySelector("#poTable tbody").innerHTML = "";
-}
-function loadGRNFromPO() {
-  const num = parseInt(document.getElementById("grnPOInput").value);
-  const po = poDB.find(p => p.docNo === num);
-  if (!po) return alert("PO not found");
-  const tbody = document.querySelector("#grnTable tbody");
-  tbody.innerHTML = "";
-  po.items.forEach(it => {
-    tbody.innerHTML += `<tr><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td><td>${it.cost}</td><td>${(it.qty*it.cost).toFixed(2)}</td></tr>`;
+
+function editItem() {
+  ["itemName", "packSize", "costPrice", "sellPrice", "supplierName"].forEach(id => {
+    document.getElementById(id).readOnly = false;
   });
 }
-function saveGRN() {
-  alert("GRN saved.");
+
+function saveItem() {
+  const code = document.getElementById("itemCode").value;
+  if (!itemDB[code]) return alert("Item not found");
+  itemDB[code] = getItemFormData();
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+  alert("Item updated");
+}
+
+function deleteItem() {
+  const code = document.getElementById("itemCode").value;
+  if (!itemDB[code]) return alert("Item not found");
+  delete itemDB[code];
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+  clearItemForm();
+  document.getElementById("itemCode").value = "";
+  alert("Item deleted");
+}
+
+function getItemFormData() {
+  return {
+    name: document.getElementById("itemName").value,
+    ps: document.getElementById("packSize").value,
+    cost: document.getElementById("costPrice").value,
+    sell: document.getElementById("sellPrice").value,
+    supplier: document.getElementById("supplierName").value
+  };
+}
+
+function clearItemForm(keepCode = false) {
+  if (!keepCode) document.getElementById("itemCode").value = "";
+  ["itemName", "packSize", "costPrice", "sellPrice", "supplierName"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
 }
 </script>
 </body>
