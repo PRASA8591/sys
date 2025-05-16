@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      font-family: 'Roboto', sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #e6e6e6;
+      padding: 10px 20px;
+      height: 80px;
+      border-bottom: 1px solid #ccc;
+    }
+    .header-right {
+      text-align: right;
+    }
+    .toggle-btn {
+      font-size: 24px;
+      background: #007bff;
+      color: white;
+      padding: 5px 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .container {
+      display: flex; height: calc(100vh - 80px);
+    }
+    .sidebar {
+      width: 250px;
+      background: #fff;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: width 0.3s;
+    }
+    .sidebar.hidden {
+      display: none;
+    }
+    .submenu {
+      display: none;
+      padding-left: 20px;
+      list-style: none;
+    }
+    .submenu li {
+      padding: 5px 0;
+      cursor: pointer;
+    }
+    .sidebar h2 {
+      margin: 0; padding: 10px;
+      background: #f0f0f0;
+      cursor: pointer;
+    }
+    .user-panel {
+      padding: 10px;
+      font-size: 12px;
+      border-top: 1px solid #ccc;
+      text-align: center;
+    }
+    .user-panel img {
+      width: 60px; height: 60px; border-radius: 50%;
+      margin-bottom: 10px;
+    }
+    .logout-btn {
+      margin: 10px;
+      padding: 8px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    input, button, textarea {
+      display: block;
+      margin: 10px 0;
+      padding: 8px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid black;
+      text-align: center;
+    }
+  </style>
+</head>
+<body onload="initDashboard()">
+  <header>
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <div class="header-right">
+      <div><strong>Inventory Management System</strong></div>
+      <div>Quick Product Search 🔍</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="sidebar" id="sidebar">
+      <div>
+        <h2 onclick="toggleMenu('fileMenu')">My Files</h2>
+        <ul class="submenu" id="fileMenu">
+          <li onclick="showSection('itemMaster')">Item Master</li>
+          <li>Location Master</li>
+          <li>Supplier Master</li>
+          <li onclick="showSection('myStock')">My Stock</li>
+        </ul>
+        <h2 onclick="toggleMenu('transactionMenu')">My Transactions</h2>
+        <ul class="submenu" id="transactionMenu">
+          <li onclick="showSection('purchaseOrder')">PO</li>
+          <li onclick="showSection('grnSection')">GRN</li>
+          <li>PRN</li>
+          <li>Transfer In</li>
+          <li>Transfer Out</li>
+        </ul>
+        <h2 onclick="toggleMenu('reportMenu')">My Reports</h2>
+        <ul class="submenu" id="reportMenu">
+          <li>Bin Card</li>
+          <li>Stock Balance Report</li>
+          <li>Sale</li>
+          <li>Transaction</li>
+        </ul>
+      </div>
+      <div class="user-panel">
+        <img src="user.png" alt="User" />
+        <p><strong>User:</strong> <span id="userName"></span></p>
+        <p><strong>Location:</strong> <span id="userLocation"></span></p>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div id="itemMaster" style="display:none;">
+        <h2>Item Master</h2>
+        <form id="itemForm">
+          <input type="text" id="itemCode" placeholder="Item Code">
+          <input type="text" id="itemName" placeholder="Item Name">
+          <input type="text" id="packSize" placeholder="Pack Size">
+          <input type="number" id="costPrice" placeholder="Cost Price">
+          <input type="number" id="sellPrice" placeholder="Selling Price">
+          <input type="text" id="supplierName" placeholder="Supplier Name">
+          <button type="submit">Save Item</button>
+        </form>
+      </div>
+      <div id="myStock" style="display:none;">
+        <h2>My Stock</h2>
+        <input type="text" id="stockItemCode" placeholder="Enter Item Code">
+        <button onclick="checkStockItem()">Check Stock</button>
+        <div id="stockResult"></div>
+      </div>
+      <div id="purchaseOrder" style="display:none;">
+        <h2>Purchase Order</h2>
+        <textarea id="poRemark" placeholder="Remarks"></textarea>
+        <table id="poTable">
+          <thead>
+            <tr><th>Code</th><th>Name</th><th>Qty</th><th>Price</th><th>Amount</th></tr>
+          </thead><tbody></tbody>
+        </table>
+        <button onclick="addPOItem()">Add Item</button>
+        <button onclick="savePO()">Save PO</button>
+      </div>
+      <div id="grnSection" style="display:none;">
+        <h2>GRN</h2>
+        <input type="number" id="grnPOInput" placeholder="Enter PO Number">
+        <button onclick="loadGRNFromPO()">Load PO</button>
+        <table id="grnTable">
+          <thead><tr><th>Code</th><th>Name</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button onclick="saveGRN()">Save GRN</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+let itemDB = JSON.parse(localStorage.getItem("itemDB") || "{}");
+let poDB = [];
+let currentPONum = 1;
+
+function initDashboard() {
+  const user = localStorage.getItem("username") || "User";
+  const location = localStorage.getItem("location") || "WarehouseA";
+  document.getElementById("userName").textContent = user;
+  document.getElementById("userLocation").textContent = location;
+
+  document.getElementById("itemForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const code = document.getElementById("itemCode").value.trim() || '1' + (Object.keys(itemDB).length + 1).toString().padStart(4, '0');
+    itemDB[code] = {
+      name: document.getElementById("itemName").value,
+      ps: document.getElementById("packSize").value,
+      cost: document.getElementById("costPrice").value,
+      sell: document.getElementById("sellPrice").value,
+      supplier: document.getElementById("supplierName").value
+    };
+    localStorage.setItem("itemDB", JSON.stringify(itemDB));
+    alert("Item saved: " + code);
+    e.target.reset();
+  });
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("hidden");
+}
+function toggleMenu(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === "block" ? "none" : "block";
+}
+function showSection(id) {
+  document.querySelectorAll(".main-content > div").forEach(div => div.style.display = "none");
+  document.getElementById(id).style.display = "block";
+}
+function logout() {
+  localStorage.clear();
+  window.location.href = 'index.html';
+}
+function checkStockItem() {
+  const code = document.getElementById("stockItemCode").value;
+  const item = itemDB[code];
+  document.getElementById("stockResult").textContent = item ? `Item: ${item.name}, Stock: ${item.sih || 0}` : "Not Found";
+}
+function addPOItem() {
+  const code = prompt("Enter item code");
+  const item = itemDB[code];
+  if (!item) return alert("Invalid code");
+  const qty = parseInt(prompt("Enter Qty"));
+  const cost = parseFloat(item.cost);
+  const row = `<tr><td>${code}</td><td>${item.name}</td><td>${qty}</td><td>${cost}</td><td>${(qty*cost).toFixed(2)}</td></tr>`;
+  document.querySelector("#poTable tbody").innerHTML += row;
+}
+function savePO() {
+  const rows = document.querySelectorAll("#poTable tbody tr");
+  const remark = document.getElementById("poRemark").value;
+  let items = [];
+  rows.forEach(r => {
+    const td = r.children;
+    items.push({ code: td[0].innerText, name: td[1].innerText, qty: parseInt(td[2].innerText), cost: parseFloat(td[3].innerText) });
+  });
+  poDB.push({ docNo: currentPONum++, remark, items });
+  alert("PO Saved");
+  document.querySelector("#poTable tbody").innerHTML = "";
+}
+function loadGRNFromPO() {
+  const num = parseInt(document.getElementById("grnPOInput").value);
+  const po = poDB.find(p => p.docNo === num);
+  if (!po) return alert("PO not found");
+  const tbody = document.querySelector("#grnTable tbody");
+  tbody.innerHTML = "";
+  po.items.forEach(it => {
+    tbody.innerHTML += `<tr><td>${it.code}</td><td>${it.name}</td><td>${it.qty}</td><td>${it.cost}</td><td>${(it.qty*it.cost).toFixed(2)}</td></tr>`;
+  });
+}
+function saveGRN() {
+  alert("GRN saved.");
+}
+</script>
+</body>
+</html>

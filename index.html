@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="12favicon.png" type="image/png">
+
+</head>
+<body>
+  <div class="login-container">
+    <img src="12favicon.png" alt="Inventory Icon">
+    <h2>Login to Inventory System</h2>
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <select id="location" required>
+        <option value="">Select Location</option>
+        <option value="WarehouseA">Warehouse A</option>
+        <option value="WarehouseB">Warehouse B</option>
+        <option value="WarehouseC">Warehouse C</option>
+      </select>
+      <button type="submit">Login</button>
+      <div id="error" class="error"></div>
+    </form>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
