@@ -289,7 +289,7 @@
     <div id="transferOutSection" style="display:none;">
       <h2>Transfer Out</h2>
       <div>
-        <label>Doc No: <input type="text" id="transferOutDocNo" readonly style="width: 60px;" /></label>
+        <label>Doc No: <input type="text" id="transferOutDocNo" style="width: 60px;" /></label>
         <label class="small-select" style="float:right; margin-left:5px;">From Location: 
           <select id="transferOutFromLocation" class="small-select" disabled></select>
         </label>
@@ -414,6 +414,14 @@ function initDashboard() {
   document.getElementById("transferInTax").addEventListener("input", transferInCalculate);
   document.getElementById("transferOutDiscount").addEventListener("input", transferOutCalculate);
   document.getElementById("transferOutTax").addEventListener("input", transferOutCalculate);
+
+  // Add event listener for Transfer Out doc num enter key
+  document.getElementById("transferOutDocNo").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      loadTransferOutByDocNo();
+    }
+  });
 }
 
 // ---------- ITEM MASTER FUNCTIONS ----------
@@ -992,6 +1000,57 @@ function transferOutProcess() {
   resetTransferOutForm();
 }
 
+// New function to load Transfer Out by Doc No from saved records
+function loadTransferOutByDocNo() {
+  const docNoInput = document.getElementById("transferOutDocNo");
+  const docNo = docNoInput.value.trim();
+  if (!docNo) {
+    alert("Please enter a Transfer Out Doc No");
+    return;
+  }
+  const transfer = transferOutDB.find(t => t.docNo === docNo);
+  if (!transfer) {
+    alert("Transfer Out Doc No not found");
+    return;
+  }
+
+  // Fill form with transfer details
+  document.getElementById("transferOutRemark").value = transfer.remark;
+  document.getElementById("transferOutToLocation").value = transfer.toLoc;
+
+  const tbody = document.querySelector("#transferOutTable tbody");
+  tbody.innerHTML = "";
+
+  transfer.items.forEach((item, index) => {
+    const itemData = itemDB[item.code];
+    const newRow = document.createElement("tr");
+    const sih = itemData?.sih || 0;
+    const expDatesOptions = itemData?.expDates.map(ed => `<option value="${ed}" ${ed === item.expDate ? "selected" : ""}>${ed}</option>`).join("") || "";
+    newRow.dataset.code = item.code;
+    newRow.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${item.code}</td>
+      <td>${itemData?.name || ""}</td>
+      <td>${itemData?.ps || ""}</td>
+      <td>
+        <select class="expDateSelect" onchange="transferOutUpdateSih(this)">
+          ${expDatesOptions}
+        </select>
+      </td>
+      <td>${item.cost.toFixed(2)}</td>
+      <td><input type="number" class="sihBox" readonly value="${sih}" style="width: 60px;"></td>
+      <td><input type="number" class="qtyBox" min="0" max="${sih}" value="${item.qty}" style="width: 60px;" oninput="transferOutUpdateAmount(this)"></td>
+      <td><input type="number" class="amountBox" readonly value="${item.amount.toFixed(2)}" style="width: 80px;"></td>
+      <td><button onclick="removeRow(this)">X</button></td>
+    `;
+    tbody.appendChild(newRow);
+  });
+
+  currentTransferOut = transfer;
+  disableTransferOutAfterSave();
+  alert("Loaded Transfer Out Doc No " + docNo);
+}
+
 function resetTransferOutForm() {
   document.getElementById("transferOutRemark").value = "";
   document.querySelector("#transferOutTable tbody").innerHTML = "";
@@ -1004,6 +1063,9 @@ function resetTransferOutForm() {
   document.getElementById("transferOutProcessBtn").style.display = "none";
   document.getElementById("transferOutToLocation").disabled = false;
   document.getElementById("transferOutRemark").disabled = false;
+
+  // Clear doc no after processing
+  document.getElementById("transferOutDocNo").value = transferOutDB.length + 1;
 }
 
 // ---------- UTILS ----------
