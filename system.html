@@ -366,8 +366,8 @@ let currentTransferOut = null;
 const locations = ["WarehouseA", "WarehouseB", "WarehouseC"];
 
 // Test item preload if not exist
-if (!itemDB["10001"]) {
-  itemDB["10001"] = {
+if (!itemDB["1"]) {
+  itemDB["1"] = {
     name: "Panadol 100ml",
     ps: "1",
     cost: 5,
@@ -378,7 +378,19 @@ if (!itemDB["10001"]) {
   };
   localStorage.setItem("itemDB", JSON.stringify(itemDB));
 }
-
+// Test item preload if not exist
+if (!itemDB["2"]) {
+  itemDB["2"] = {
+    name: "NEVOX XR",
+    ps: "30",
+    cost: 17,
+    sell: 35,
+    supplier: "Test Supplier",
+    sih: 300,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
 function initDashboard() {
   const user = localStorage.getItem("username") || "User";
   const location = localStorage.getItem("location") || "WarehouseA";
