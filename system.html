@@ -326,9 +326,10 @@
       </div>
     </div>
 
-    <!-- PURCHASE ORDER -->
+<!-- PURCHASE ORDER -->
 <div id="purchaseOrder" style="display:none;">
   <h2>Purchase Order</h2>
+  <label>PO Number: <input type="text" id="poDocNo" value="1" readonly style="width: 60px;" /></label>
   <textarea id="poRemark" placeholder="Remark"></textarea>
   <table id="poTable">
     <thead>
@@ -338,15 +339,17 @@
   </table>
   <button onclick="addPOItem()" class="short-btn">Add Item</button>
   <button onclick="savePO()" class="short-btn">Save PO</button>
+  <p>Total: <span id="poTotal">0.00</span></p> <!-- Display Total Amount here -->
 </div>
 
-<!-- GRN -->
+<!-- GRN (Goods Received Note) -->
 <div id="grnSection" style="display:none;">
   <h2>GRN</h2>
+  <label>GRN Doc No: <input type="text" id="grnDocNo" style="width: 60px;" /></label>
   <input type="number" id="grnPOInput" placeholder="Enter PO Number" />
   <button onclick="loadGRNFromPO()" class="short-btn">Load PO</button>
   <table id="grnTable">
-    <thead><tr><th>Code</th><th>Name</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
+    <thead><tr><th>Code</th><th>Name</th><th>Qty</th><th>Cost</th><th>Expiry Date</th><th>Total</th></tr></thead>
     <tbody id="grnTableBody"></tbody>
   </table>
   <button onclick="saveGRN()" class="short-btn">Save GRN</button>
@@ -354,6 +357,10 @@
 
 <script>
   // ---- PO (Purchase Order) Functions ----
+  function initPOForm() {
+    const poNumber = 1;  // Default PO number (start from 1)
+    document.getElementById("poDocNo").value = poNumber;
+  }
 
   // Add item to PO table
   function addPOItem() {
@@ -389,6 +396,7 @@
       <td class="amount">${amount.toFixed(2)}</td>
     `;
     tbody.appendChild(newRow);
+    calculatePO();
   }
 
   // Update PO item amount when quantity changes
@@ -421,12 +429,14 @@
       const amount = parseFloat(row.querySelector(".amount").textContent) || 0;
       poItems.push({ code, qty, amount });
     });
+
     const poData = {
       poNumber: new Date().getTime(), // PO number as current timestamp (or implement your own logic)
       remark: document.getElementById("poRemark").value,
       items: poItems,
       total: document.getElementById("poTotal").textContent
     };
+
     poDB.push(poData);
     alert("PO saved!");
     resetPOForm();
@@ -437,11 +447,10 @@
     document.getElementById("poRemark").value = "";
     document.querySelector("#poTableBody").innerHTML = "";
     document.getElementById("poTotal").textContent = "0.00";
+    initPOForm();  // Set new PO number for next PO
   }
 
   // ---- GRN (Goods Received Note) Functions ----
-
-  // Load PO details based on entered PO number
   function loadGRNFromPO() {
     const poNumber = document.getElementById("grnPOInput").value;
     const po = poDB.find(p => p.poNumber === poNumber);
@@ -449,6 +458,9 @@
       alert("PO not found.");
       return;
     }
+
+    document.getElementById("grnDocNo").value = poNumber; // Set GRN doc number to PO number
+
     const tbody = document.querySelector("#grnTableBody");
     tbody.innerHTML = ""; // Clear the table before filling
 
@@ -457,13 +469,23 @@
       tr.innerHTML = `
         <td>${item.code}</td>
         <td>${itemDB[item.code].name}</td>
-        <td><input type="number" value="${item.qty}" min="0" /></td>
+        <td><input type="number" value="${item.qty}" min="0" onchange="updateGRNAmount(this)" /></td>
         <td>${itemDB[item.code].cost}</td>
+        <td><input type="date" value="${item.expDate}" /></td>
         <td><input type="number" value="${item.amount}" readonly /></td>
       `;
       tbody.appendChild(tr);
     });
     alert("PO loaded.");
+  }
+
+  // Update GRN item amount when quantity changes
+  function updateGRNAmount(input) {
+    const tr = input.closest("tr");
+    const qty = parseFloat(input.value) || 0;
+    const cost = parseFloat(tr.children[3].textContent);
+    const amount = qty * cost;
+    tr.querySelector("td:nth-child(6) input").value = amount.toFixed(2);
   }
 
   // Save the GRN after receiving items
@@ -474,7 +496,7 @@
 
     tbody.querySelectorAll("tr").forEach(row => {
       const code = row.children[0].textContent;
-      const receivedQty = parseFloat(row.querySelector("input").value) || 0;
+      const receivedQty = parseFloat(row.querySelector("input[type='number']").value) || 0;
       const amount = receivedQty * parseFloat(row.children[3].textContent);
       grnItems.push({ code, receivedQty, amount });
       totalAmount += amount;
@@ -485,6 +507,16 @@
       items: grnItems,
       totalAmount: totalAmount.toFixed(2)
     };
+
+    // Update stock after GRN processing
+    grnItems.forEach(item => {
+      if (itemDB[item.code]) {
+        itemDB[item.code].sih += item.receivedQty; // Add received quantity to stock
+      }
+    });
+
+    localStorage.setItem("itemDB", JSON.stringify(itemDB));  // Save updated stock in local storage
+
     alert("GRN saved: Total Amount: " + grnData.totalAmount);
     resetGRNForm();
   }
@@ -492,10 +524,13 @@
   // Reset GRN form
   function resetGRNForm() {
     document.getElementById("grnPOInput").value = "";
+    document.getElementById("grnDocNo").value = "";
     document.querySelector("#grnTableBody").innerHTML = "";
   }
 
 </script>
+
+
 
 <script>
 let itemDB = JSON.parse(localStorage.getItem("itemDB") || "{}");
