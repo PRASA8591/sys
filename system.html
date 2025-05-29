@@ -161,8 +161,8 @@
 <header>
   <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
   <div class="header-right">
-    <div><strong>Inventory Management System</strong></div>
-    <div>Quick Product Search 🔍</div>
+    <div><strong><h2>PRASA (PVT) LTD</h2></strong></div>
+    <div>Lets Start Working </div>
   </div>
 </header>
 <div class="container">
@@ -327,32 +327,175 @@
     </div>
 
     <!-- PURCHASE ORDER -->
-    <div id="purchaseOrder" style="display:none;">
-      <h2>Purchase Order</h2>
-      <textarea id="poRemark" placeholder="Remark"></textarea>
-      <table id="poTable">
-        <thead>
-          <tr><th>Code</th><th>Name</th><th>PS</th><th>Cost</th><th>Qty</th><th>Amount</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <button onclick="addPOItem()" class="short-btn">Add Item</button>
-      <button onclick="savePO()" class="short-btn">Save PO</button>
-    </div>
-
-    <!-- GRN -->
-    <div id="grnSection" style="display:none;">
-      <h2>GRN</h2>
-      <input type="number" id="grnPOInput" placeholder="Enter PO Number" />
-      <button onclick="loadGRNFromPO()" class="short-btn">Load PO</button>
-      <table id="grnTable">
-        <thead><tr><th>Code</th><th>Name</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <button onclick="saveGRN()" class="short-btn">Save GRN</button>
-    </div>
-  </div>
+<div id="purchaseOrder" style="display:none;">
+  <h2>Purchase Order</h2>
+  <textarea id="poRemark" placeholder="Remark"></textarea>
+  <table id="poTable">
+    <thead>
+      <tr><th>Code</th><th>Name</th><th>PS</th><th>Cost</th><th>Qty</th><th>Amount</th></tr>
+    </thead>
+    <tbody id="poTableBody"></tbody>
+  </table>
+  <button onclick="addPOItem()" class="short-btn">Add Item</button>
+  <button onclick="savePO()" class="short-btn">Save PO</button>
 </div>
+
+<!-- GRN -->
+<div id="grnSection" style="display:none;">
+  <h2>GRN</h2>
+  <input type="number" id="grnPOInput" placeholder="Enter PO Number" />
+  <button onclick="loadGRNFromPO()" class="short-btn">Load PO</button>
+  <table id="grnTable">
+    <thead><tr><th>Code</th><th>Name</th><th>Qty</th><th>Cost</th><th>Total</th></tr></thead>
+    <tbody id="grnTableBody"></tbody>
+  </table>
+  <button onclick="saveGRN()" class="short-btn">Save GRN</button>
+</div>
+
+<script>
+  // ---- PO (Purchase Order) Functions ----
+
+  // Add item to PO table
+  function addPOItem() {
+    const codeOrName = prompt("Enter Item Code or Name:");
+    if (!codeOrName) return;
+
+    const codeFound = findItemCode(codeOrName);
+    if (!codeFound) {
+      alert("Item not found.");
+      return;
+    }
+    const item = itemDB[codeFound];
+    const tbody = document.querySelector("#poTableBody");
+
+    // Check if item already in table - do not duplicate
+    const exists = Array.from(tbody.children).some(tr => tr.dataset.code === codeFound);
+    if (exists) {
+      alert("Item already added.");
+      return;
+    }
+
+    const qty = prompt("Enter Quantity:");
+    const amount = qty * item.cost;
+
+    const newRow = document.createElement("tr");
+    newRow.dataset.code = codeFound;
+    newRow.innerHTML = `
+      <td>${codeFound}</td>
+      <td>${item.name}</td>
+      <td>${item.ps}</td>
+      <td>${item.cost}</td>
+      <td><input type="number" value="${qty}" min="1" onchange="updatePOAmount(this)" /></td>
+      <td class="amount">${amount.toFixed(2)}</td>
+    `;
+    tbody.appendChild(newRow);
+  }
+
+  // Update PO item amount when quantity changes
+  function updatePOAmount(input) {
+    const tr = input.closest("tr");
+    const qty = parseFloat(input.value) || 0;
+    const cost = parseFloat(tr.children[3].textContent);
+    const amount = qty * cost;
+    tr.querySelector(".amount").textContent = amount.toFixed(2);
+    calculatePO();
+  }
+
+  // Calculate total for PO
+  function calculatePO() {
+    let total = 0;
+    const rows = document.querySelectorAll("#poTableBody tr");
+    rows.forEach(row => {
+      total += parseFloat(row.querySelector(".amount").textContent) || 0;
+    });
+    document.getElementById("poTotal").textContent = total.toFixed(2);
+  }
+
+  // Save the PO to the database
+  function savePO() {
+    const poItems = [];
+    const tbody = document.querySelector("#poTableBody");
+    tbody.querySelectorAll("tr").forEach(row => {
+      const code = row.dataset.code;
+      const qty = parseFloat(row.querySelector("input").value) || 0;
+      const amount = parseFloat(row.querySelector(".amount").textContent) || 0;
+      poItems.push({ code, qty, amount });
+    });
+    const poData = {
+      poNumber: new Date().getTime(), // PO number as current timestamp (or implement your own logic)
+      remark: document.getElementById("poRemark").value,
+      items: poItems,
+      total: document.getElementById("poTotal").textContent
+    };
+    poDB.push(poData);
+    alert("PO saved!");
+    resetPOForm();
+  }
+
+  // Reset PO form
+  function resetPOForm() {
+    document.getElementById("poRemark").value = "";
+    document.querySelector("#poTableBody").innerHTML = "";
+    document.getElementById("poTotal").textContent = "0.00";
+  }
+
+  // ---- GRN (Goods Received Note) Functions ----
+
+  // Load PO details based on entered PO number
+  function loadGRNFromPO() {
+    const poNumber = document.getElementById("grnPOInput").value;
+    const po = poDB.find(p => p.poNumber === poNumber);
+    if (!po) {
+      alert("PO not found.");
+      return;
+    }
+    const tbody = document.querySelector("#grnTableBody");
+    tbody.innerHTML = ""; // Clear the table before filling
+
+    po.items.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.code}</td>
+        <td>${itemDB[item.code].name}</td>
+        <td><input type="number" value="${item.qty}" min="0" /></td>
+        <td>${itemDB[item.code].cost}</td>
+        <td><input type="number" value="${item.amount}" readonly /></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    alert("PO loaded.");
+  }
+
+  // Save the GRN after receiving items
+  function saveGRN() {
+    const tbody = document.querySelector("#grnTableBody");
+    const grnItems = [];
+    let totalAmount = 0;
+
+    tbody.querySelectorAll("tr").forEach(row => {
+      const code = row.children[0].textContent;
+      const receivedQty = parseFloat(row.querySelector("input").value) || 0;
+      const amount = receivedQty * parseFloat(row.children[3].textContent);
+      grnItems.push({ code, receivedQty, amount });
+      totalAmount += amount;
+    });
+
+    const grnData = {
+      grnNumber: new Date().getTime(),
+      items: grnItems,
+      totalAmount: totalAmount.toFixed(2)
+    };
+    alert("GRN saved: Total Amount: " + grnData.totalAmount);
+    resetGRNForm();
+  }
+
+  // Reset GRN form
+  function resetGRNForm() {
+    document.getElementById("grnPOInput").value = "";
+    document.querySelector("#grnTableBody").innerHTML = "";
+  }
+
+</script>
 
 <script>
 let itemDB = JSON.parse(localStorage.getItem("itemDB") || "{}");
@@ -368,7 +511,7 @@ const locations = ["WarehouseA", "WarehouseB", "WarehouseC"];
 // Test item preload if not exist
 if (!itemDB["1"]) {
   itemDB["1"] = {
-    name: "Panadol 100ml",
+    name: "PANADOL 100ml",
     ps: "1",
     cost: 5,
     sell: 10,
@@ -387,6 +530,136 @@ if (!itemDB["2"]) {
     sell: 35,
     supplier: "Test Supplier",
     sih: 300,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["13"]) {
+  itemDB["3"] = {
+    name: "PARACETAMOL 1000MG",
+    ps: "1",
+    cost: 20,
+    sell: 45,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["4"]) {
+  itemDB["4"] = {
+    name: "Pregablin 150MG ",
+    ps: "100",
+    cost: 35,
+    sell: 50,
+    supplier: "Test Supplier",
+    sih: 1000,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["5"]) {
+  itemDB["5"] = {
+    name: "GABIX 100MG",
+    ps: "10",
+    cost: 30,
+    sell: 45,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["6"]) {
+  itemDB["6"] = {
+    name: "ALERID 10MG",
+    ps: "100",
+    cost: 5,
+    sell: 10,
+    supplier: "Test Supplier",
+    sih: 10000,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["7"]) {
+  itemDB["7"] = {
+    name: "ASTHALIN 100 INHALER",
+    ps: "1",
+    cost: 150,
+    sell: 225,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["8"]) {
+  itemDB["8"] = {
+    name: "FORACORT 100 INHALER",
+    ps: "1",
+    cost: 300,
+    sell: 400,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["9"]) {
+  itemDB["9"] = {
+    name: "PROBETA EYE DROP",
+    ps: "1",
+    cost: 5,
+    sell: 10,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["10"]) {
+  itemDB["10"] = {
+    name: "PROBETA N EYE DROP",
+    ps: "1",
+    cost: 5,
+    sell: 10,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["11"]) {
+  itemDB["11"] = {
+    name: "MEGA CHECK 4257 MONITOR",
+    ps: "1",
+    cost: 4500,
+    sell: 5500,
+    supplier: "Test Supplier",
+    sih: 100,
+    expDates: ["2026-05-30"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
+// Test item preload if not exist
+if (!itemDB["12"]) {
+  itemDB["12"] = {
+    name: "METASPRAY NASAL",
+    ps: "1",
+    cost: 150,
+    sell: 220,
+    supplier: "Test Supplier",
+    sih: 100,
     expDates: ["2026-05-30"]
   };
   localStorage.setItem("itemDB", JSON.stringify(itemDB));
