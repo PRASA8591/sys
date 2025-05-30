@@ -1,6 +1,7 @@
 const users = {
   user1: { password: "pass123", location: "WarehouseA" },
   user2: { password: "secret456", location: "WarehouseB" },
+  PRASA: { password: "123", location: "WarehouseA" },
   user3: { password: "admin789", location: "WarehouseC" }
 };
 
