@@ -595,6 +595,19 @@ if (!itemDB["4"]) {
   };
   localStorage.setItem("itemDB", JSON.stringify(itemDB));
 }
+  // Test item preload if not exist
+if (!itemDB["4"]) {
+  itemDB["4"] = {
+    name: "Pregablin 150MG ",
+    ps: "100",
+    cost: 35,
+    sell: 50,
+    supplier: "Test Supplier",
+    sih: 1000,
+    expDates: ["2027-09-25"]
+  };
+  localStorage.setItem("itemDB", JSON.stringify(itemDB));
+}
 // Test item preload if not exist
 if (!itemDB["5"]) {
   itemDB["5"] = {
